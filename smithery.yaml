@@ -1,0 +1,17 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required: []
+    properties:
+      exampleEnvVariable:
+        type: string
+        description: An example environment variable extracted from the .env.example
+          file. Replace with actual variables as needed.
+  commandFunction:
+    # A function that produces the CLI command to start the MCP on stdio.
+    |-
+    (config) => ({ command: 'uvicorn', args: ['app.main:app', '--reload'], env: { EXAMPLE_ENV_VAR: config.exampleEnvVariable } })

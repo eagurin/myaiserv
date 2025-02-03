@@ -1,5 +1,7 @@
 # MyAIServ: AI-Powered FastAPI Server with MCP 🚀
 
+[![smithery badge](https://smithery.ai/badge/@eagurin/myaiserv)](https://smithery.ai/server/@eagurin/myaiserv)
+
 High-performance FastAPI server implementing Model Context Protocol (MCP) for seamless integration with Large Language Models (LLMs). Built with modern stack: FastAPI, Elasticsearch, Redis, Prometheus, and Grafana.
 
 [View Detailed Architecture](ARCHITECTURE.md)
@@ -15,6 +17,15 @@ High-performance FastAPI server implementing Model Context Protocol (MCP) for se
 
 ## Quick Start 🚀
 
+### Installing via Smithery
+
+To install AI-Powered FastAPI Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@eagurin/myaiserv):
+
+```bash
+npx -y @smithery/cli install @eagurin/myaiserv --client claude
+```
+
+### Manual Installation
 ```bash
 # Clone and setup
 git clone https://github.com/eagurin/myaiserv.git
