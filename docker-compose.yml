@@ -1,6 +1,5 @@
 services:
   web:
-
     build: .
     ports:
       - "${APP_PORT}:8000"
@@ -30,15 +29,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+
 
 
   db:
@@ -120,44 +111,45 @@ services:
     depends_on:
       zookeeper:
         condition: service_healthy
-    env_file:
-      - .env
-
+    ports:
+      - "${KAFKA_PORT}:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:${KAFKA_PORT}
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_LOG_RETENTION_HOURS: 168
-      KAFKA_MESSAGE_MAX_BYTES: 1000000
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - app_network
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list"]
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
-    env_file:
-      - .env
-    environment:
-        ZOOKEEPER_CLIENT_PORT: 2181
-        ZOOKEEPER_TICK_TIME: 2000
-        ZOOKEEPER_SYNC_LIMIT: 2
-        ZOOKEEPER_INIT_LIMIT: 5
+      - zookeeper_log:/var/lib/zookeeper/log
     networks:
       - app_network
     healthcheck:
-      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1"]
+      test: echo srvr | nc localhost 2181 || exit 1
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
 
   grafana:
     image: grafana/grafana:10.2.0
@@ -212,6 +204,7 @@ volumes:
   postgres_data:
   es_data:
   zookeeper_data:
+  zookeeper_log:
   grafana_data:
   prometheus_data:
   redis_data:

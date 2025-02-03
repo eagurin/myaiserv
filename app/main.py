@@ -1,36 +1,34 @@
 import asyncio
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.models.mcp import (
-    MCPError,
-    Message,
-    MessageContent,
-    MessageRole,
-    ModelPreferences,
-    Prompt,
-    Resource,
-    Tool,
+    MCPError, Message, MessageContent, MessageRole,
+    ModelPreferences, Prompt, Resource, Tool,
 )
-
 from app.services.mcp_service import mcp_service
 
 app = FastAPI(title="MCP Server", docs_url="/docs", redoc_url="/redoc")
-
-# Initialize Prometheus metrics
 Instrumentator().instrument(app).expose(app)
+
 
 
 @app.on_event("startup")
 async def startup_event():
-    # Tools are registered when imported
+    # Register example tools
+    from app.tools.example_tool import register_tools
+    await register_tools()
+    
     print("MCP Server started with the following tools:")
-    for tool_name, tool in mcp_service.list_tools().items():
+    tools = await mcp_service.list_tools()
+    for tool_name, tool in tools.items():
         print(f"- {tool_name}: {tool.description}")
+
 
 
 # CORS middleware
@@ -74,7 +72,31 @@ async def health_check():
 
 @app.get("/tools")
 async def list_tools():
-    return {"tools": list(mcp_service.list_tools().values())}
+    tools = await mcp_service.list_tools()
+    return {"tools": list(tools.values())}
+
+
+class ToolParameters(BaseModel):
+    operation: str
+    path: str
+    content: Optional[str] = None
+
+    model_config = {
+        "extra": "allow"  # Allow additional fields
+    }
+
+@app.post("/tools/{tool_name}")
+async def execute_tool(tool_name: str, parameters: ToolParameters):
+    try:
+        # Convert to dict and remove None values
+        params_dict = {k: v for k, v in parameters.model_dump().items() if v is not None}
+        result = await mcp_service.execute_tool(tool_name, params_dict)
+        return result
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.websocket("/ws")
@@ -89,13 +111,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 message_data = message.get("data", {})
 
                 if message_type == "tool_request":
-                    response = await mcp_service.execute_tool(message_data)
+                    response = await mcp_service.execute_tool(
+                        message_data.get("name", ""),
+                        message_data.get("parameters", {})
+                    )
                     await websocket.send_json(
                         {"type": "tool_response", "data": response}
                     )
                 elif message_type == "register_tool":
                     tool = Tool(**message_data)
-                    mcp_service.register_tool(tool)
+                    await mcp_service.register_tool(tool)
                     await websocket.send_json(
                         {
                             "type": "registration_response",

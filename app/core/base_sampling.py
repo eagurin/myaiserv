@@ -105,6 +105,14 @@ class KeywordSampler(BaseSampler):
 
         return "code_assistant"  # По умолчанию
 
+    async def initialize(self) -> None:
+        """Initialize the keyword sampler"""
+        pass  # No initialization needed for keyword-based sampling
+
+    async def cleanup(self) -> None:
+        """Cleanup the keyword sampler"""
+        pass  # No cleanup needed for keyword-based sampling
+
     async def prepare_context(
         self, messages: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:

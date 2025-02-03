@@ -1,114 +1,114 @@
 groups:
-	- name: storage_alerts
-		rules:
-			# Elasticsearch alerts
-			- alert: ElasticsearchClusterRed
-				expr: elasticsearch_cluster_health_status{color="red"} == 1
-				for: 5m
-				labels:
-					severity: critical
-				annotations:
-					summary: "Elasticsearch cluster is RED"
-					description: "Elasticsearch cluster has been in RED status for 5 minutes"
+  - name: storage_alerts
+    rules:
+      # Elasticsearch alerts
+      - alert: ElasticsearchClusterRed
+        expr: elasticsearch_cluster_health_status{color="red"} == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Elasticsearch cluster is RED"
+          description: "Elasticsearch cluster has been in RED status for 5 minutes"
 
-			- alert: ElasticsearchClusterYellow
-				expr: elasticsearch_cluster_health_status{color="yellow"} == 1
-				for: 15m
-				labels:
-					severity: warning
-				annotations:
-					summary: "Elasticsearch cluster is YELLOW"
-					description: "Elasticsearch cluster has been in YELLOW status for 15 minutes"
+      - alert: ElasticsearchClusterYellow
+        expr: elasticsearch_cluster_health_status{color="yellow"} == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elasticsearch cluster is YELLOW"
+          description: "Elasticsearch cluster has been in YELLOW status for 15 minutes"
 
-			- alert: ElasticsearchHighDiskUsage
-				expr: elasticsearch_filesystem_data_available_bytes / elasticsearch_filesystem_data_size_bytes * 100 < 15
-				for: 5m
-				labels:
-					severity: warning
-				annotations:
-					summary: "Elasticsearch disk space low"
-					description: "Elasticsearch data node disk usage is above 85%"
+      - alert: ElasticsearchHighDiskUsage
+        expr: elasticsearch_filesystem_data_available_bytes / elasticsearch_filesystem_data_size_bytes * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elasticsearch disk space low"
+          description: "Elasticsearch data node disk usage is above 85%"
 
-			- alert: ElasticsearchHighJVMUsage
-				expr: elasticsearch_jvm_memory_used_bytes / elasticsearch_jvm_memory_max_bytes * 100 > 90
-				for: 5m
-				labels:
-					severity: warning
-				annotations:
-					summary: "Elasticsearch JVM memory high"
-					description: "Elasticsearch JVM memory usage is above 90%"
+      - alert: ElasticsearchHighJVMUsage
+        expr: elasticsearch_jvm_memory_used_bytes / elasticsearch_jvm_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elasticsearch JVM memory high"
+          description: "Elasticsearch JVM memory usage is above 90%"
 
-			# Redis alerts
-			- alert: RedisDown
-				expr: redis_up == 0
-				for: 1m
-				labels:
-					severity: critical
-				annotations:
-					summary: "Redis instance down"
-					description: "Redis instance has been down for more than 1 minute"
+      # Redis alerts
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis instance down"
+          description: "Redis instance has been down for more than 1 minute"
 
-			- alert: RedisHighMemoryUsage
-				expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
-				for: 5m
-				labels:
-					severity: warning
-				annotations:
-					summary: "Redis memory usage high"
-					description: "Redis memory usage is above 90%"
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is above 90%"
 
-			- alert: RedisHighKeyspaceEvictionRate
-				expr: rate(redis_evicted_keys_total[5m]) > 100
-				for: 5m
-				labels:
-					severity: warning
-				annotations:
-					summary: "High Redis key eviction rate"
-					description: "Redis is evicting more than 100 keys per second"
+      - alert: RedisHighKeyspaceEvictionRate
+        expr: rate(redis_evicted_keys_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Redis key eviction rate"
+          description: "Redis is evicting more than 100 keys per second"
 
-			- alert: RedisLowHitRate
-				expr: rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) < 0.5
-				for: 15m
-				labels:
-					severity: warning
-				annotations:
-					summary: "Redis low hit rate"
-					description: "Redis cache hit rate is below 50% for 15 minutes"
+      - alert: RedisLowHitRate
+        expr: rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) < 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis low hit rate"
+          description: "Redis cache hit rate is below 50% for 15 minutes"
 
-			# Storage performance alerts
-			- alert: ElasticsearchHighQueryLatency
-				expr: elasticsearch_query_latency:p95 > 1
-				for: 5m
-				labels:
-					severity: warning
-				annotations:
-					summary: "High Elasticsearch query latency"
-					description: "95th percentile of Elasticsearch query latency is above 1 second"
+      # Storage performance alerts
+      - alert: ElasticsearchHighQueryLatency
+        expr: elasticsearch_query_latency:p95 > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Elasticsearch query latency"
+          description: "95th percentile of Elasticsearch query latency is above 1 second"
 
-			- alert: RedisHighCommandLatency
-				expr: redis_command_latency:p95 > 0.1
-				for: 5m
-				labels:
-					severity: warning
-				annotations:
-					summary: "High Redis command latency"
-					description: "95th percentile of Redis command latency is above 100ms"
+      - alert: RedisHighCommandLatency
+        expr: redis_command_latency:p95 > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Redis command latency"
+          description: "95th percentile of Redis command latency is above 100ms"
 
-			# Storage capacity alerts
-			- alert: ElasticsearchIndexGrowthHigh
-				expr: elasticsearch_index_size_bytes:rate5m > 1e6
-				for: 15m
-				labels:
-					severity: warning
-				annotations:
-					summary: "High Elasticsearch index growth rate"
-					description: "Elasticsearch index size is growing faster than 1MB/s"
+      # Storage capacity alerts
+      - alert: ElasticsearchIndexGrowthHigh
+        expr: elasticsearch_index_size_bytes:rate5m > 1e6
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Elasticsearch index growth rate"
+          description: "Elasticsearch index size is growing faster than 1MB/s"
 
-			- alert: RedisKeyspaceFullSoon
-				expr: predict_linear(redis_db_keys_total[1h], 24 * 3600) > redis_config_maxmemory
-				for: 15m
-				labels:
-					severity: warning
-				annotations:
-					summary: "Redis keyspace will be full soon"
-					description: "Redis keyspace is predicted to reach max memory within 24 hours"
+      - alert: RedisKeyspaceFullSoon
+        expr: predict_linear(redis_db_keys_total[1h], 24 * 3600) > redis_config_maxmemory
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis keyspace will be full soon"
+          description: "Redis keyspace is predicted to reach max memory within 24 hours"

@@ -29,8 +29,9 @@ uvicorn app.main:app --reload
 ```
 
 Access:
-- API Docs: http://localhost:8000/docs
-- GraphQL: http://localhost:8000/graphql
+
+- API Docs: <http://localhost:8000/docs>
+- GraphQL: <http://localhost:8000/graphql>
 
 ## Stack 🛠
 
@@ -40,8 +41,6 @@ Access:
 - **Testing:** Pytest
 - **Deployment:** Docker, Docker Compose
 
-
 ## License 📄
 
 [MIT](LICENSE)
-

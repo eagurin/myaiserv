@@ -1,52 +1,55 @@
-# FastAPI и зависимости
+# FastAPI and dependencies
 fastapi>=0.100.0
 uvicorn>=0.22.0
 pydantic>=2.0.0
 python-multipart>=0.0.6
 python-dotenv>=1.0.0
+prometheus-client>=0.8.0
+prometheus-fastapi-instrumentator>=6.1.0
 
 # GraphQL
 graphql-core>=3.2.0
 strawberry-graphql>=0.205.0
 
-# Базы данных
+# Databases
 elasticsearch[async]>=8.10.0
 redis>=5.0.0
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.6
 alembic>=1.11.0
 
-# HTTP и WebSocket
+# HTTP and WebSocket
 httpx>=0.24.0
 websockets>=11.0.3
 jsonschema>=4.17.3
 
-# Мониторинг и метрики
-prometheus-fastapi-instrumentator>=6.0.0
+# Monitoring and metrics
 psutil>=5.9.0
 
-# Безопасность
+# Security
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 python-multipart>=0.0.6
 
-# CLI утилиты
+# CLI utilities
 click>=8.0.0
 rich>=13.0.0
 
-# Тестирование
+# Testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 pytest-cov>=4.1.0
 httpx>=0.24.0
 
-# Логирование
+# Logging
 loguru>=0.7.0
 
-# MCP зависимости
+# MCP dependencies
 mcp>=1.2.0
 
-# Утилиты
+# Utilities
 aiofiles>=23.0.0
 python-magic>=0.4.27
-sentence-transformers>=2.2.2
+
+jsonschema
+psutil

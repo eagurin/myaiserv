@@ -52,7 +52,7 @@ class Tool(BaseModel):
             >>> tool = Tool(
             ...     name="calculate_sum",
             ...     description="Add two numbers",
-            ...     inputSchema={
+            ...     input_schema={
             ...         "type": "object",
             ...         "properties": {
             ...             "a": {"type": "number"},
@@ -65,7 +65,7 @@ class Tool(BaseModel):
 
     name: str = Field(..., description="Уникальное имя инструмента")
     description: str = Field(..., description="Описание функциональности")
-    inputSchema: Dict[str, Any] = Field(
+    input_schema: Dict[str, Any] = Field(
         ..., description="JSON Schema входных параметров"
     )
 
@@ -178,7 +178,7 @@ class MCPError(BaseModel):
 
 
 # GraphQL типы для интеграции
-from graphql import (GraphQLField, GraphQLList, GraphQLNonNull,
+from graphql.type import (GraphQLField, GraphQLList, GraphQLNonNull,
                      GraphQLObjectType, GraphQLSchema, GraphQLString)
 
 # Определение GraphQL схемы для MCP

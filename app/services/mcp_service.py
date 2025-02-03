@@ -4,7 +4,8 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import jsonschema
 from fastapi import HTTPException
-from graphql import GraphQLSchema, graphql_sync
+from graphql import GraphQLSchema, graphql
+
 
 from app.core.base_sampling import BaseSampler, KeywordSampler, MLSampler
 from app.models.mcp import (ContentType, MCPError, Message, MessageContent,
@@ -67,9 +68,9 @@ class MCPService:
         """Получение инструмента по имени"""
         return self.tools.get(name)
 
-    async def list_tools(self) -> List[Tool]:
+    async def list_tools(self) -> Dict[str, Tool]:
         """Список всех доступных инструментов"""
-        return list(self.tools.values())
+        return self.tools
 
     async def execute_tool(
         self, name: str, parameters: Dict[str, Any]
@@ -83,7 +84,7 @@ class MCPService:
 
         # Validate parameters against schema
         try:
-            jsonschema.validate(parameters, tool.inputSchema)
+            jsonschema.validate(parameters, tool.input_schema)
         except jsonschema.exceptions.ValidationError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
@@ -162,7 +163,7 @@ class MCPService:
         """Обработка GraphQL запроса"""
         from app.models.mcp import mcp_schema
 
-        result = await graphql_sync(
+        result = await graphql(
             mcp_schema, query, variable_values=variables
         )
         if result.errors:
@@ -173,10 +174,15 @@ class MCPService:
     async def _execute_tool_logic(
         self, tool: Tool, parameters: Dict[str, Any]
     ) -> Any:
-        """Реализация логики выполнения инструмента"""
-        raise NotImplementedError(
-            f"Tool '{tool.name}' execution not implemented"
-        )
+        """Execute tool logic"""
+        try:
+            result = await tool.execute(parameters)
+            return result
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Tool execution failed: {str(e)}"
+            )
 
     async def _generate_prompt_messages(
         self, prompt: Prompt, arguments: Dict[str, Any]

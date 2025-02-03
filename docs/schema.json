@@ -1,0 +1,22 @@
+{
+  "tables": [
+    {
+      "name": "users",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "primary_key": true
+        },
+        {
+          "name": "username",
+          "type": "varchar(255)"
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,23 +1,22 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Install poetry
-RUN pip install poetry
+# Copy requirements file
+COPY requirements.txt .
 
-# Copy poetry files
-COPY pyproject.toml poetry.lock* ./
+# Install dependencies with optimizations
+RUN pip install --upgrade pip \
+    && pip install --force-reinstall Cython \
+    && pip install --no-cache-dir -r requirements.txt \
+    && rm -rf /root/.cache/pip/*
 
-# Configure poetry to not create virtual environment
-RUN poetry config virtualenvs.create false
-
-# Install dependencies
-RUN poetry install --no-interaction --no-ansi
 
 # Copy application code
 COPY . .
@@ -29,4 +28,6 @@ RUN mkdir -p logs
 EXPOSE 8000
 
 # Command to run the application
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
