@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+	web:
+		build: 
+			context: ..
+			dockerfile: Dockerfile
+		ports:
+			- "${APP_PORT}:8000"
+		volumes:
+			- ..:/app
+			- ../logs:/app/logs
+		env_file:
+			- .env
+		environment:
+			PYTHONPATH: /app
+			PYTHONUNBUFFERED: 1
+		command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+		depends_on:
+			db:
+				condition: service_healthy
+			elasticsearch:
+				condition: service_healthy
+			kafka:
+				condition: service_healthy
+		networks:
+			- test_network
+
+	db:
+		image: postgres:15
+		volumes:
+			- postgres_test_data:/var/lib/postgresql/data
+		env_file:
+			- .env
+		ports:
+			- "${POSTGRES_PORT}:5432"
+		healthcheck:
+			test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+			interval: 10s
+			timeout: 5s
+			retries: 5
+		networks:
+			- test_network
+
+	elasticsearch:
+		image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+		volumes:
+			- es_test_data:/usr/share/elasticsearch/data
+		env_file:
+			- .env
+		ports:
+			- "${ES_PORT}:9200"
+		environment:
+			- discovery.type=single-node
+			- xpack.security.enabled=false
+			- "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+		networks:
+			- test_network
+		healthcheck:
+			test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'status.*green'"]
+			interval: 30s
+			timeout: 30s
+			retries: 3
+
+	kafka:
+		image: confluentinc/cp-kafka:7.5.0
+		depends_on:
+			zookeeper:
+				condition: service_healthy
+		env_file:
+			- .env
+		environment:
+			KAFKA_BROKER_ID: 1
+			KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+			KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:${KAFKA_PORT}
+			KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+			KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+			KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+		networks:
+			- test_network
+		healthcheck:
+			test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list"]
+			interval: 30s
+			timeout: 10s
+			retries: 3
+
+	zookeeper:
+		image: confluentinc/cp-zookeeper:7.5.0
+		volumes:
+			- zookeeper_test_data:/var/lib/zookeeper/data
+		env_file:
+			- .env
+		environment:
+			ZOOKEEPER_CLIENT_PORT: 2181
+			ZOOKEEPER_TICK_TIME: 2000
+		networks:
+			- test_network
+		healthcheck:
+			test: ["CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1"]
+			interval: 10s
+			timeout: 5s
+			retries: 3
+
+	grafana:
+		image: grafana/grafana:10.2.0
+		volumes:
+			- grafana_test_data:/var/lib/grafana
+			- ../config/grafana/provisioning:/etc/grafana/provisioning
+			- ../config/grafana/dashboards:/var/lib/grafana/dashboards
+		env_file:
+			- .env
+		ports:
+			- "${GRAFANA_PORT}:3000"
+		networks:
+			- test_network
+		depends_on:
+			prometheus:
+				condition: service_healthy
+
+	prometheus:
+		image: prom/prometheus:v2.48.0
+		volumes:
+			- prometheus_test_data:/prometheus
+			- ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+			- ../config/prometheus/rules:/etc/prometheus/rules
+		command:
+			- '--config.file=/etc/prometheus/prometheus.yml'
+			- '--storage.tsdb.path=/prometheus'
+		env_file:
+			- .env
+		ports:
+			- "${PROMETHEUS_PORT}:9090"
+		networks:
+			- test_network
+		healthcheck:
+			test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:9090/-/healthy", "-O", "/dev/null"]
+			interval: 30s
+			timeout: 10s
+			retries: 3
+
+networks:
+	test_network:
+		driver: bridge
+
+volumes:
+	postgres_test_data:
+	es_test_data:
+	zookeeper_test_data:
+	grafana_test_data:
+	prometheus_test_data:

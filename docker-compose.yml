@@ -1,0 +1,217 @@
+services:
+  web:
+
+    build: .
+    ports:
+      - "${APP_PORT}:8000"
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
+      PYTHONUNBUFFERED: 1
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    env_file:
+      - .env
+    ports:
+      - "${ES_PORT}:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.name=myapp-cluster
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'status.*green'"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  redis:
+    image: redis:7.2
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    ports:
+      - "${KIBANA_PORT}:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q 'available'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    env_file:
+      - .env
+
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:${KAFKA_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    env_file:
+      - .env
+    environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+        ZOOKEEPER_SYNC_LIMIT: 2
+        ZOOKEEPER_INIT_LIMIT: 5
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+    env_file:
+      - .env
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    networks:
+      - app_network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    volumes:
+    - prometheus_data:/prometheus
+    - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    - ./config/prometheus/rules:/etc/prometheus/rules
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    env_file:
+      - .env
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:9090/-/healthy", "-O", "/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  es_data:
+  zookeeper_data:
+  grafana_data:
+  prometheus_data:
+  redis_data:

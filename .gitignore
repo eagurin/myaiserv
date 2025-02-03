@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.o
+*.obj
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.venv/
+.env
+.DS_Store
+venv/
+build/
+*.log
+*.out
+*.tmp
+*.bak
+*.swp
+*.swo
+

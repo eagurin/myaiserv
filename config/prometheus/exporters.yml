@@ -1,0 +1,83 @@
+# Elasticsearch exporter
+elasticsearch_exporter:
+  image: quay.io/prometheuscommunity/elasticsearch-exporter:latest
+  command:
+    - '--es.uri=http://elasticsearch:9200'
+    - '--es.all'
+    - '--es.indices'
+    - '--es.indices_settings'
+    - '--es.shards'
+    - '--es.snapshots'
+    - '--web.listen-address=:9114'
+    - '--web.telemetry-path=/metrics'
+  restart: always
+  ports:
+    - "9114:9114"
+  networks:
+    - app_network
+
+# Redis exporter
+redis_exporter:
+  image: oliver006/redis_exporter:latest
+  environment:
+    - REDIS_ADDR=redis://redis:6379
+    - REDIS_PASSWORD=${REDIS_PASSWORD}
+  command:
+    - '--web.listen-address=:9121'
+    - '--web.telemetry-path=/metrics'
+    - '--redis.addr=redis://redis:6379'
+    - '--check-keys=*'
+    - '--check-single-keys=prompt:*,resource:*'
+  restart: always
+  ports:
+    - "9121:9121"
+  networks:
+    - app_network
+
+# Prometheus scrape configs
+scrape_configs:
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch_exporter:9114']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '${1}'
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis_exporter:9121']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '${1}'
+
+# Alert rules
+rule_files:
+  - /etc/prometheus/rules/storage_alerts.yml
+
+# Recording rules for storage metrics
+rules:
+  groups:
+    - name: storage_recording_rules
+      interval: 1m
+      rules:
+        - record: elasticsearch_index_size_bytes:rate5m
+          expr: rate(elasticsearch_indices_store_size_bytes[5m])
+        
+        - record: redis_memory_usage_percent
+          expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100
+        
+        - record: elasticsearch_query_latency:p95
+          expr: histogram_quantile(0.95, rate(elasticsearch_indices_search_query_time_seconds_bucket[5m]))
+        
+        - record: redis_command_latency:p95
+          expr: histogram_quantile(0.95, rate(redis_commands_duration_seconds_bucket[5m]))

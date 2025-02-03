@@ -1,0 +1,71 @@
+{
+	"analyze_code": {
+		"name": "analyze-code",
+		"description": "Analyze code for potential improvements and issues",
+		"arguments": [
+			{
+				"name": "language",
+				"description": "Programming language of the code",
+				"required": true
+			},
+			{
+				"name": "code",
+				"description": "Code to analyze",
+				"required": true
+			},
+			{
+				"name": "focus",
+				"description": "Focus of analysis (performance/security/style)",
+				"required": false
+			}
+		]
+	},
+	"analyze_data": {
+		"name": "analyze-data",
+		"description": "Analyze data and provide insights",
+		"arguments": [
+			{
+				"name": "data",
+				"description": "Data to analyze (JSON or CSV format)",
+				"required": true
+			},
+			{
+				"name": "analysis_type",
+				"description": "Type of analysis to perform",
+				"required": true
+			}
+		]
+	},
+	"generate_docs": {
+		"name": "generate-docs",
+		"description": "Generate documentation for code or API",
+		"arguments": [
+			{
+				"name": "content",
+				"description": "Code or API specification to document",
+				"required": true
+			},
+			{
+				"name": "format",
+				"description": "Documentation format (markdown/rst/html)",
+				"required": false
+			}
+		]
+	},
+	"generate_sql": {
+		"name": "generate-sql",
+		"description": "Generate SQL queries from natural language",
+		"arguments": [
+			{
+				"name": "description",
+				"description": "Natural language description of the query",
+				"required": true
+			},
+			{
+				"name": "dialect",
+				"description": "SQL dialect (mysql/postgresql/sqlite)",
+				"required": false
+			}
+		]
+	}
+}

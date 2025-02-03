@@ -1,0 +1,99 @@
+# Cluster settings
+cluster:
+  name: myapp-cluster
+  routing.allocation.disk.threshold_enabled: true
+  routing.allocation.disk.watermark.low: "85%"
+  routing.allocation.disk.watermark.high: "90%"
+
+# Node settings
+node:
+  name: ${HOSTNAME}
+  master: true
+  data: true
+  ingest: true
+
+# Network settings
+network:
+  host: 0.0.0.0
+  publish_host: ${HOSTNAME}
+
+# Memory settings
+bootstrap.memory_lock: true
+
+# Path settings
+path:
+  data: /usr/share/elasticsearch/data
+  logs: /usr/share/elasticsearch/logs
+
+# Security settings
+xpack.security.enabled: false
+
+# Search settings
+search:
+  max_buckets: 100000
+  default_search_timeout: "30s"
+
+# Index settings
+index:
+  number_of_shards: 1
+  number_of_replicas: 0
+  refresh_interval: "1s"
+  mapping:
+    total_fields.limit: 2000
+    nested_fields.limit: 100
+    depth.limit: 20
+  
+  analysis:
+    analyzer:
+      default:
+        type: custom
+        tokenizer: standard
+        filter:
+          - lowercase
+          - asciifolding
+          - word_delimiter
+          - snowball
+      
+      ngram_analyzer:
+        type: custom
+        tokenizer: standard
+        filter:
+          - lowercase
+          - asciifolding
+          - ngram
+      
+    filter:
+      ngram:
+        type: ngram
+        min_gram: 2
+        max_gram: 3
+
+# Cache settings
+cache:
+  recycler.page.limit.heap: 50%
+  field.type: node
+  field.max_size: 50000
+  field.expire: 10m
+
+# Thread pool settings
+thread_pool:
+  write:
+    size: 4
+    queue_size: 1000
+  search:
+    size: 8
+    queue_size: 1000
+
+# Monitoring settings
+xpack.monitoring.enabled: true
+xpack.monitoring.collection.enabled: true
+
+# ML settings
+xpack.ml.enabled: true
+xpack.ml.max_open_jobs: 20
+
+# Vector search settings
+vector:
+  dense_vector:
+    dims: 384
+    similarity: cosine

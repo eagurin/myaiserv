@@ -1,0 +1,52 @@
+# FastAPI и зависимости
+fastapi>=0.100.0
+uvicorn>=0.22.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
+python-dotenv>=1.0.0
+
+# GraphQL
+graphql-core>=3.2.0
+strawberry-graphql>=0.205.0
+
+# Базы данных
+elasticsearch[async]>=8.10.0
+redis>=5.0.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.6
+alembic>=1.11.0
+
+# HTTP и WebSocket
+httpx>=0.24.0
+websockets>=11.0.3
+jsonschema>=4.17.3
+
+# Мониторинг и метрики
+prometheus-fastapi-instrumentator>=6.0.0
+psutil>=5.9.0
+
+# Безопасность
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+
+# CLI утилиты
+click>=8.0.0
+rich>=13.0.0
+
+# Тестирование
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+httpx>=0.24.0
+
+# Логирование
+loguru>=0.7.0
+
+# MCP зависимости
+mcp>=1.2.0
+
+# Утилиты
+aiofiles>=23.0.0
+python-magic>=0.4.27
+sentence-transformers>=2.2.2
