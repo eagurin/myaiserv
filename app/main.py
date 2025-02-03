@@ -59,7 +59,6 @@ class ConnectionManager:
             await connection.send_text(message)
 
 
-
 manager = ConnectionManager()
 
 
@@ -91,34 +90,32 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 if message_type == "tool_request":
                     response = await mcp_service.execute_tool(message_data)
-                    await websocket.send_json({
-                        "type": "tool_response",
-                        "data": response
-                    })
+                    await websocket.send_json(
+                        {"type": "tool_response", "data": response}
+                    )
                 elif message_type == "register_tool":
                     tool = Tool(**message_data)
                     mcp_service.register_tool(tool)
-                    await websocket.send_json({
-                        "type": "registration_response",
-                        "data": {
-                            "status": "success",
-                            "message": f"Tool '{tool.name}' registered"
+                    await websocket.send_json(
+                        {
+                            "type": "registration_response",
+                            "data": {
+                                "status": "success",
+                                "message": f"Tool '{tool.name}' registered",
+                            },
                         }
-                    })
+                    )
                 else:
-                    await websocket.send_json({
-                        "type": "error",
-                        "data": {"message": "Unknown message type"}
-                    })
+                    await websocket.send_json(
+                        {"type": "error", "data": {"message": "Unknown message type"}}
+                    )
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "data": {"message": "Invalid JSON"}
-                })
+                await websocket.send_json(
+                    {"type": "error", "data": {"message": "Invalid JSON"}}
+                )
             except Exception as e:
-                await websocket.send_json({
-                    "type": "error",
-                    "data": {"message": str(e)}
-                })
+                await websocket.send_json(
+                    {"type": "error", "data": {"message": str(e)}}
+                )
     except WebSocketDisconnect:
         manager.disconnect(websocket)
