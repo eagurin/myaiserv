@@ -2,14 +2,14 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
-import aioredis
+import redis.asyncio as redis
 
 
 class RedisStorage:
     """Класс для работы с Redis"""
 
     def __init__(self):
-        self.redis = aioredis.from_url(
+        self.redis = redis.from_url(
             os.getenv("REDIS_URL", "redis://redis:6379"),
             encoding="utf-8",
             decode_responses=True,

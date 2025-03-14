@@ -1,17 +1,22 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-# Форматирование кода с помощью black, isort, ruff
-echo "Форматирование кода..."
-black src tests
-isort src tests
-ruff check --fix src tests
+# Скрипт для форматирования кода
+# Авто-форматирование с помощью black, isort и ruff
 
-# Проверка типов с помощью mypy
-echo "Проверка типов..."
-mypy src
+SRC_DIR="./app"
+TESTS_DIR="./tests"
 
-# Проверка на ошибки с помощью flake8
-echo "Проверка на ошибки..."
-flake8 src tests
+echo "Запуск black..."
+poetry run black ${SRC_DIR} ${TESTS_DIR}
 
-echo "Готово!"
+echo "Запуск isort..."
+poetry run isort ${SRC_DIR} ${TESTS_DIR}
+
+echo "Запуск ruff format..."
+poetry run ruff format ${SRC_DIR} ${TESTS_DIR}
+
+echo "Запуск ruff check --fix..."
+poetry run ruff check --fix ${SRC_DIR} ${TESTS_DIR}
+
+echo "Форматирование кода завершено."

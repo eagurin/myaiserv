@@ -59,6 +59,40 @@ flowchart TB
  PM --> AE
 ```
 
+## Deployment Methods
+
+### Using Docker Compose
+
+The project includes a Docker Compose setup for quick deployment:
+
+```bash
+# Build and start all services
+docker compose up -d
+
+# Scale API servers if needed
+docker compose up -d --scale web=3
+```
+
+### Production Deployment with Docker
+
+Our Docker image uses Poetry for dependency management, ensuring consistent environments across all deployments:
+
+1. Pull the image:
+   ```bash
+   docker pull myaiserv/api:latest
+   ```
+
+2. Run with proper environment variables:
+   ```bash
+   docker run -d \
+     -p 8000:8000 \
+     -e DATABASE_URL=<db-url> \
+     -e REDIS_URL=<redis-url> \
+     -e ES_URL=<elasticsearch-url> \
+     -v /path/to/logs:/app/logs \
+     myaiserv/api:latest
+   ```
+
 ## Deployment Configuration
 
 ### Container Orchestration
@@ -105,3 +139,33 @@ flowchart TB
 - **Redis**: 1 master + 2 replicas, 2 CPU, 4GB RAM each
 - **Monitoring**: 2 CPU, 4GB RAM
 - **Storage**: 100GB+ per Elasticsearch node
+
+## CI/CD Pipeline
+
+Our CI/CD pipeline uses Poetry to ensure consistent environment across development, testing, and production:
+
+1. **Build Phase**:
+   - Install dependencies with Poetry
+   - Run linters and formatters
+   - Execute tests
+
+2. **Packaging Phase**:
+   - Build Docker image with Poetry dependencies
+   - Push to container registry
+
+3. **Deployment Phase**:
+   - Pull latest image
+   - Deploy with zero downtime
+   - Run health checks
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection URL | `postgresql://user:pass@localhost:5432/myaiserv` |
+| `REDIS_URL` | Redis connection URL | `redis://localhost:6379/0` |
+| `ES_URL` | Elasticsearch URL | `http://localhost:9200` |
+| `LOG_LEVEL` | Application log level | `INFO` |
+| `DEBUG` | Enable debug mode | `false` |
+| `PORT` | Application port | `8000` |
+| `HOST` | Bind address | `0.0.0.0` |

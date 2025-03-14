@@ -1,3 +1,46 @@
+[tool.poetry]
+name = "myaiserv"
+version = "0.1.0"
+description = "AI Service with FastAPI"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+# Веб-сервер и API
+fastapi = "^0.110.0"
+uvicorn = "^0.27.1"
+# HTTP и WebSocket клиенты
+httpx = "^0.27.0"
+websockets = "^12.0"
+# Тестирование
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.5"
+pytest-cov = "^4.1.0"
+# Интеграции и утилиты
+python-magic = "^0.4.27"
+strawberry-graphql = "^0.219.1"
+prometheus-fastapi-instrumentator = "^6.1.0"
+# Хранилища данных
+elasticsearch = "^8.12.0"
+redis = "^5.0.3"
+# Асинхронные HTTP
+aiohttp = "^3.9.3"
+
+[tool.poetry.group.dev.dependencies]
+# Форматирование кода
+black = "24.2.0"
+isort = "5.13.2"
+# Линтеры
+flake8 = "7.0.0"
+mypy = "1.8.0"
+ruff = "0.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.black]
 line-length = 88
 target-version = ["py39", "py310", "py311"]
@@ -35,3 +78,15 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["app/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["."]
+addopts = "-v --tb=short -p no:warnings"
+markers = [
+    "asyncio: mark test as async",
+    "integration: mark test as integration test"
+]

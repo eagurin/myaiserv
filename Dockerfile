@@ -8,15 +8,15 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
-COPY requirements.txt .
+# Install poetry
+RUN curl -sSL https://install.python-poetry.org | python3 - \
+    && poetry config virtualenvs.create false
+
+# Copy poetry configuration
+COPY pyproject.toml poetry.lock* ./
 
 # Install dependencies with optimizations
-RUN pip install --upgrade pip \
-    && pip install --force-reinstall Cython \
-    && pip install --no-cache-dir -r requirements.txt \
-    && rm -rf /root/.cache/pip/*
-
+RUN poetry install --no-interaction --no-ansi --no-root --no-dev
 
 # Copy application code
 COPY . .

@@ -111,6 +111,17 @@ flowchart TB
 - **Prometheus**: Metrics collection and alerting
 - **Grafana**: Visualization and dashboards
 
+### Development Tools
+
+- **Poetry**: Package and dependency management
+  - Handles virtual environment creation
+  - Manages dependencies with precise versioning
+  - Supports development vs production dependencies
+  - Integrates with CI/CD pipeline
+- **Just**: Task runner for common operations
+  - Simplifies common development tasks
+  - Standardizes commands across development environments
+
 ## Data Flow Sequence
 
 1. Client sends request through WebSocket/REST/GraphQL
@@ -120,3 +131,31 @@ flowchart TB
 5. Results are stored in Elasticsearch/Redis
 6. Response is sent back to client
 7. Metrics are collected by Prometheus
+
+## Development Environment Setup
+
+The project uses Poetry for dependency management. This ensures consistent environments across development, testing, and production.
+
+### Dependency Management
+
+Dependencies are defined in `pyproject.toml` with exact versions to ensure reproducibility:
+
+```toml
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.110.0"
+uvicorn = "^0.27.1"
+httpx = "^0.27.0"
+# Additional dependencies...
+
+[tool.poetry.group.dev.dependencies]
+black = "24.2.0"
+isort = "5.13.2"
+flake8 = "7.0.0"
+mypy = "1.8.0"
+ruff = "0.3.0"
+```
+
+### Docker Integration
+
+Poetry is integrated with our Docker build process to ensure that the same dependency versions are used in container environments.

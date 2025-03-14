@@ -1,13 +1,11 @@
 """MCP Service module."""
 
 from asyncio import Queue
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
-from app.core.base_mcp import MCPComponent
 from app.core.errors import MCPError
 from app.models.mcp import (
     Message,
-    MessageContent,
     MessageRole,
     ModelPreferences,
     SamplingRequest,
@@ -230,3 +228,26 @@ class MCPService:
             return result
         except Exception as err:
             raise MCPError(f"GraphQL query execution failed: {err}") from err
+
+    async def register_tool(self, tool: Tool) -> None:
+        """Регистрация инструмента в сервисе."""
+        self.registry.register_tool(tool)
+
+    async def list_tools(self) -> dict:
+        """Получение списка всех инструментов."""
+        return self.registry.tools
+
+    async def list_prompts(self) -> list:
+        """Получение списка всех промптов."""
+        return list(self.registry.prompts.values())
+
+    async def list_resources(self) -> list:
+        """Получение списка всех ресурсов."""
+        return list(self.registry.resources.values())
+
+
+# Создаем глобальный экземпляр MCPRegistry
+mcp_registry = MCPRegistry()
+
+# Создаем глобальный экземпляр MCPService
+mcp_service = MCPService(registry=mcp_registry)

@@ -1,14 +1,15 @@
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import strawberry
 from strawberry.fastapi import GraphQLRouter
+from strawberry.scalars import JSON
 
 
 @strawberry.type
 class Tool:
     name: str
     description: str
-    input_schema: Dict[str, Any]
+    input_schema: JSON
 
 
 @strawberry.type
@@ -62,13 +63,13 @@ class PromptResult:
 @strawberry.input
 class ToolInput:
     name: str
-    parameters: Dict[str, Any]
+    parameters: JSON
 
 
 @strawberry.input
 class PromptInput:
     name: str
-    arguments: Dict[str, Any]
+    arguments: JSON
 
 
 @strawberry.input

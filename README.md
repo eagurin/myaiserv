@@ -2,6 +2,7 @@
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.95.0-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![Poetry](https://img.shields.io/badge/Poetry-1.7.0-60A5FA.svg?style=flat&logo=poetry)](https://python-poetry.org/)
 [![Prometheus](https://img.shields.io/badge/Prometheus-Metrics-E6522C.svg?style=flat&logo=prometheus)](https://prometheus.io/)
 [![GraphQL](https://img.shields.io/badge/GraphQL-API-E10098.svg?style=flat&logo=graphql)](https://graphql.org/)
 
@@ -17,6 +18,7 @@ MCP Server - это реализация Model Context Protocol (MCP) на ба�
 - 💬 **WebSocket поддержка** для реал-тайм взаимодействия
 - 🔍 **Семантический поиск** через интеграцию с Elasticsearch
 - 🗃️ **Кэширование** через Redis для улучшения производительности
+- 📦 **Управление зависимостями** через Poetry для надежного управления пакетами
 
 ## Начало работы
 
@@ -28,22 +30,25 @@ MCP Server - это реализация Model Context Protocol (MCP) на ба�
    cd myaiserv
    ```
 
-2. Создать и активировать виртуальное окружение:
+2. Установить Poetry (если еще не установлен):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/macOS
-   venv\Scripts\activate     # Windows
+   curl -sSL https://install.python-poetry.org | python3 -
    ```
 
-3. Установить зависимости:
+3. Установить зависимости через Poetry:
    ```bash
-   pip install -r requirements.txt
+   poetry install
    ```
 
 ### Запуск сервера
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Или через утилиту just:
+```bash
+just run
 ```
 
 После запуска API доступен по адресу: [http://localhost:8000](http://localhost:8000)
@@ -73,10 +78,11 @@ myaiserv/
 │   │   └── text_processor.py # Инструмент обработки текста
 │   ├── utils/            # Утилиты
 │   └── main.py           # Точка входа FastAPI
+├── app/tests/            # Тесты
 ├── docs/                 # Документация
 │   └── MCP_API.md        # Описание API
-├── tests/                # Тесты
-└── requirements.txt      # Зависимости
+├── pyproject.toml        # Конфигурация Poetry и инструментов
+└── .justfile             # Задачи для утилиты just
 ```
 
 ## Доступные инструменты
@@ -182,6 +188,33 @@ mutation {
 }
 ```
 
+## Запуск тестов
+
+Для запуска тестов используйте Poetry:
+
+```bash
+poetry run pytest
+```
+
+Или через утилиту just:
+```bash
+just test
+```
+
+## Docker
+
+### Сборка и запуск через Docker Compose
+
+```bash
+docker compose up -d
+```
+
+Для запуска отдельных сервисов:
+
+```bash
+docker compose up -d web redis elasticsearch
+```
+
 ## Интеграция с LLM
 
 MCP Server предоставляет стандартизированный интерфейс для интеграции с LLM-моделями различных поставщиков:
@@ -218,6 +251,14 @@ MCP Server предоставляет метрики в формате Prometheu
 - Количество запросов к каждому инструменту
 - Время выполнения запросов
 - Ошибки и исключения
+
+## Разработка
+
+Для форматирования кода и проверки линтерами:
+```bash
+just fmt
+just lint
+```
 
 ## Лицензия
 
