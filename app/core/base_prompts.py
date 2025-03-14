@@ -8,9 +8,7 @@ from .base_mcp import BaseMCPComponent
 class BasePrompt(BaseMCPComponent):
     """Базовый класс для всех промптов"""
 
-    def __init__(
-        self, name: str, description: str, arguments: List[Dict[str, Any]]
-    ):
+    def __init__(self, name: str, description: str, arguments: List[Dict[str, Any]]):
         super().__init__(name, description)
         self.arguments = arguments
         self._system_prompt: Optional[str] = None
@@ -26,9 +24,7 @@ class BasePrompt(BaseMCPComponent):
         }
         missing_args = required_args - set(arguments.keys())
         if missing_args:
-            raise ValueError(
-                f"Missing required arguments: {', '.join(missing_args)}"
-            )
+            raise ValueError(f"Missing required arguments: {', '.join(missing_args)}")
 
     @abstractmethod
     async def generate_messages(

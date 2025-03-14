@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app.utils.prompt_loader import prompt_loader
 
@@ -35,9 +35,7 @@ class BaseSampler(BaseMCPComponent):
         """Выполнение сэмплинга"""
         try:
             # Определяем тип задачи
-            task_type = await self.determine_task_type(
-                request.get("messages", [])
-            )
+            task_type = await self.determine_task_type(request.get("messages", []))
 
             # Получаем системный промпт
             if task_type in self._system_prompts:
@@ -49,9 +47,7 @@ class BaseSampler(BaseMCPComponent):
 
             # Подготавливаем контекст
             if request.get("includeContext") != "none":
-                context = await self.prepare_context(
-                    request.get("messages", [])
-                )
+                context = await self.prepare_context(request.get("messages", []))
                 request["messages"].extend(context)
 
             # Логируем выполнение

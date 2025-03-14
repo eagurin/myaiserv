@@ -1,29 +1,34 @@
 """
-MCP Tools Package
+Инструменты MCP.
 
-This package contains all MCP (Model Context Protocol) components:
-- Tools: Executable functions that can be called by LLMs
-- Resources: Data sources that can be accessed by LLMs
-- Prompts: Templates for generating LLM messages
-- System Prompts: Context providers for LLM sampling
+Этот пакет содержит инструменты, которые могут быть использованы
+через MCP API.
 """
 
-import logging
+from app.tools.file import FileSystemTool
+from app.tools.registry import register_tools
+from app.tools.weather import WeatherTool
 
-# Configure logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# Импортируем дополнительные инструменты, если они доступны
+try:
+    from app.tools.text import TextProcessorTool
+except ImportError:
+    TextProcessorTool = None
 
-# Import all MCP components
-from app.services.mcp_service import mcp_service
-from . import (example_prompts, example_resources, example_system_prompts,
-               example_tool)
+try:
+    from app.tools.search import SearchTool
+except ImportError:
+    SearchTool = None
 
 __all__ = [
-    "mcp_service",
-    "example_tool",
-    "example_resources",
-    "example_prompts",
-    "example_system_prompts",
+    "FileSystemTool",
+    "WeatherTool",
+    "register_tools",
 ]
 
+# Добавляем дополнительные инструменты в __all__, если они доступны
+if TextProcessorTool is not None:
+    __all__.append("TextProcessorTool")
+
+if SearchTool is not None:
+    __all__.append("SearchTool")

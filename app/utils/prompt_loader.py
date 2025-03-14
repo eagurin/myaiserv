@@ -1,7 +1,6 @@
 import json
 import os
-from functools import lru_cache
-from pathlib import Path
+from functools import cache
 from typing import Any, Dict, Optional
 
 
@@ -13,7 +12,7 @@ class PromptLoader:
             os.path.dirname(os.path.dirname(__file__)), "prompts"
         )
 
-    @lru_cache(maxsize=None)
+    @cache
     def load_prompts(self, prompt_type: str) -> Dict[str, Any]:
         """Загрузка промптов из JSON файла
 
@@ -25,7 +24,7 @@ class PromptLoader:
         """
         file_path = os.path.join(self.prompts_dir, f"{prompt_type}.json")
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading prompts from {file_path}: {str(e)}")
@@ -63,15 +62,11 @@ class PromptLoader:
 
         # Проверяем обязательные аргументы
         required_args = {
-            arg["name"]
-            for arg in prompt["arguments"]
-            if arg.get("required", False)
+            arg["name"] for arg in prompt["arguments"] if arg.get("required", False)
         }
         missing_args = required_args - set(kwargs.keys())
         if missing_args:
-            raise ValueError(
-                f"Missing required arguments: {', '.join(missing_args)}"
-            )
+            raise ValueError(f"Missing required arguments: {', '.join(missing_args)}")
 
         return {
             "name": prompt["name"],

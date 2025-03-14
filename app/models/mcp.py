@@ -1,22 +1,36 @@
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
+from graphql.type import (
+    GraphQLField,
+    GraphQLList,
+    GraphQLNonNull,
+    GraphQLObjectType,
+    GraphQLSchema,
+    GraphQLString,
+)
 from pydantic import BaseModel, Field
 
 
 class ResourceType(str, Enum):
     """Типы ресурсов MCP"""
 
-    TEXT = "text"
-    BINARY = "binary"
+    DOCUMENT = "document"
+    IMAGE = "image"
+    AUDIO = "audio"
+    VIDEO = "video"
+    DATASET = "dataset"
+    SCHEMA = "schema"
+    CONFIG = "config"
 
 
 class MessageRole(str, Enum):
     """Роли в диалоге MCP"""
 
+    SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
-    SYSTEM = "system"
+    TOOL = "tool"
 
 
 class ContentType(str, Enum):
@@ -24,7 +38,10 @@ class ContentType(str, Enum):
 
     TEXT = "text"
     IMAGE = "image"
-    RESOURCE = "resource"
+    AUDIO = "audio"
+    VIDEO = "video"
+    FILE = "file"
+    JSON = "json"
 
 
 class Resource(BaseModel):
@@ -43,6 +60,7 @@ class Resource(BaseModel):
     name: str = Field(..., description="Человекочитаемое имя ресурса")
     description: Optional[str] = Field(None, description="Описание ресурса")
     mimeType: Optional[str] = Field(None, description="MIME тип ресурса")
+    resourceType: Optional[ResourceType] = Field(None, description="Тип ресурса")
 
 
 class Tool(BaseModel):
@@ -68,6 +86,7 @@ class Tool(BaseModel):
     input_schema: Dict[str, Any] = Field(
         ..., description="JSON Schema входных параметров"
     )
+    requires_approval: bool = Field(False, description="Требуется ли одобрение")
 
 
 class PromptArgument(BaseModel):
@@ -75,9 +94,9 @@ class PromptArgument(BaseModel):
 
     name: str = Field(..., description="Имя аргумента")
     description: Optional[str] = Field(None, description="Описание аргумента")
-    required: bool = Field(
-        default=False, description="Обязательность аргумента"
-    )
+    required: bool = Field(default=False, description="Обязательность аргумента")
+    type: str = Field("string", description="Тип аргумента")
+    default: Optional[Any] = Field(None, description="Значение по умолчанию")
 
 
 class Prompt(BaseModel):
@@ -99,35 +118,41 @@ class Prompt(BaseModel):
 
     name: str = Field(..., description="Уникальное имя промпта")
     description: Optional[str] = Field(None, description="Описание промпта")
+    template: Optional[str] = Field(None, description="Шаблон промпта")
     arguments: Optional[List[PromptArgument]] = Field(
         None, description="Аргументы промпта"
     )
+    system_prompt: Optional[str] = Field(None, description="Системный промпт")
 
 
 class MessageContent(BaseModel):
     """Контент сообщения MCP"""
 
-    type: ContentType
+    type: ContentType = Field(ContentType.TEXT)
     text: Optional[str] = None
     data: Optional[str] = None
-    mimeType: Optional[str] = None
-    resource: Optional[Resource] = None
+    mime_type: Optional[str] = None
+    resource_uri: Optional[str] = None
 
 
 class Message(BaseModel):
     """Модель сообщения MCP"""
 
     role: MessageRole
-    content: MessageContent
+    content: Union[MessageContent, List[MessageContent]]
 
 
 class ModelPreferences(BaseModel):
     """Предпочтения модели для сэмплинга"""
 
-    hints: Optional[List[Dict[str, str]]] = None
-    costPriority: Optional[float] = Field(None, ge=0, le=1)
-    speedPriority: Optional[float] = Field(None, ge=0, le=1)
-    intelligencePriority: Optional[float] = Field(None, ge=0, le=1)
+    model_name: Optional[str] = None
+    provider: Optional[str] = None
+    max_tokens: Optional[int] = None
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    top_k: Optional[int] = None
+    frequency_penalty: Optional[float] = None
+    presence_penalty: Optional[float] = None
 
 
 class SamplingRequest(BaseModel):
@@ -148,14 +173,12 @@ class SamplingRequest(BaseModel):
             ... )
     """
 
-    messages: List[Message]
-    modelPreferences: Optional[ModelPreferences] = None
+    messages: List[Dict[str, Any]]
+    modelPreferences: Optional[Dict[str, Any]] = None
     systemPrompt: Optional[str] = None
-    includeContext: Optional[Literal["none", "thisServer", "allServers"]] = (
-        "none"
-    )
-    temperature: Optional[float] = Field(None, ge=0, le=1)
-    maxTokens: int
+    includeContext: Optional[str] = "none"
+    temperature: Optional[float] = None
+    maxTokens: Optional[int] = 1024
     stopSequences: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -169,17 +192,13 @@ class SamplingResponse(BaseModel):
     content: MessageContent
 
 
-class MCPError(BaseModel):
+class MCPErrorResponse(BaseModel):
     """Модель ошибки MCP"""
 
-    code: int
+    code: str
     message: str
-    data: Optional[Any] = None
+    details: Optional[Dict[str, Any]] = None
 
-
-# GraphQL типы для интеграции
-from graphql.type import (GraphQLField, GraphQLList, GraphQLNonNull,
-                     GraphQLObjectType, GraphQLSchema, GraphQLString)
 
 # Определение GraphQL схемы для MCP
 mcp_schema = GraphQLSchema(
@@ -192,9 +211,7 @@ mcp_schema = GraphQLSchema(
                         GraphQLObjectType(
                             name="Tool",
                             fields={
-                                "name": GraphQLField(
-                                    GraphQLNonNull(GraphQLString)
-                                ),
+                                "name": GraphQLField(GraphQLNonNull(GraphQLString)),
                                 "description": GraphQLField(GraphQLString),
                             },
                         )

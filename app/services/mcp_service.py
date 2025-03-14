@@ -1,218 +1,232 @@
-import asyncio
-from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List, Optional
+"""MCP Service module."""
 
-import jsonschema
-from fastapi import HTTPException
-from graphql import GraphQLSchema, graphql
+from asyncio import Queue
+from typing import Any, Dict, List, Optional, Set
+
+from app.core.base_mcp import MCPComponent
+from app.core.errors import MCPError
+from app.models.mcp import (
+    Message,
+    MessageContent,
+    MessageRole,
+    ModelPreferences,
+    SamplingRequest,
+    SamplingResponse,
+)
+from app.models.mcp.tool import Tool
+from app.storage.base import BaseStorage
+from app.storage.elasticsearch import ElasticsearchStorage
+from app.storage.redis import RedisStorage
 
 
-from app.core.base_sampling import BaseSampler, KeywordSampler, MLSampler
-from app.models.mcp import (ContentType, MCPError, Message, MessageContent,
-                            MessageRole, ModelPreferences, Prompt, Resource,
-                            SamplingRequest, SamplingResponse, Tool,
-                            mcp_schema)
-from app.utils.prompt_loader import prompt_loader
+class MCPRegistry:
+    """Registry for MCP components."""
+
+    def __init__(self) -> None:
+        """Initialize the registry."""
+        self.tools: dict[str, Tool] = {}
+        self.resources: dict[str, Any] = {}
+        self.prompts: dict[str, Any] = {}
+        self.samplers: dict[str, Any] = {}
+        self.observers: dict[str, set[Queue]] = {}
+
+    def register_tool(self, tool: Tool) -> None:
+        """Register a tool."""
+        self.tools[tool.name] = tool
+
+    def get_tool(self, name: str) -> Tool:
+        """Get a tool by name."""
+        return self.tools[name]
+
+    def register_resource(self, name: str, resource: Any) -> None:
+        """Register a resource."""
+        self.resources[name] = resource
+
+    def get_resource(self, name: str) -> Any:
+        """Get a resource by name."""
+        return self.resources[name]
+
+    def register_prompt(self, name: str, prompt: Any) -> None:
+        """Register a prompt."""
+        self.prompts[name] = prompt
+
+    def get_prompt(self, name: str) -> Any:
+        """Get a prompt by name."""
+        return self.prompts[name]
+
+    def register_sampler(self, name: str, sampler: Any) -> None:
+        """Register a sampler."""
+        self.samplers[name] = sampler
+
+    def get_sampler(self, name: str) -> Any:
+        """Get a sampler by name."""
+        return self.samplers[name]
+
+    def subscribe_to_resource(self, name: str, queue: Queue) -> None:
+        """Subscribe to resource updates."""
+        if name not in self.observers:
+            self.observers[name] = set()
+        self.observers[name].add(queue)
+
+    def unsubscribe_from_resource(self, name: str, queue: Queue) -> None:
+        """Unsubscribe from resource updates."""
+        if name in self.observers and queue in self.observers[name]:
+            self.observers[name].remove(queue)
 
 
 class MCPService:
-    """Сервис для обработки MCP запросов
+    """Service for managing MCP components."""
 
-    Provides:
-            - Resource management
-            - Tool execution
-            - Prompt handling
-            - Sampling support
-            - GraphQL API
-    """
-
-    def __init__(self):
-        self.tools: Dict[str, Tool] = {}
-        self.resources: Dict[str, Resource] = {}
-        self.prompts: Dict[str, Prompt] = {}
-        self.subscriptions: Dict[str, List[AsyncGenerator]] = {}
-        self.samplers: Dict[str, BaseSampler] = {}
-
-    # Resource Management
-    async def register_resource(self, resource: Resource) -> None:
-        """Регистрация нового ресурса"""
-        self.resources[resource.uri] = resource
-
-    async def get_resource(self, uri: str) -> Optional[Resource]:
-        """Получение ресурса по URI"""
-        return self.resources.get(uri)
-
-    async def list_resources(self) -> List[Resource]:
-        """Список всех доступных ресурсов"""
-        return list(self.resources.values())
-
-    @asynccontextmanager
-    async def subscribe_to_resource(self, uri: str):
-        """Подписка на обновления ресурса"""
-        if uri not in self.subscriptions:
-            self.subscriptions[uri] = []
-
-        queue = asyncio.Queue()
-        self.subscriptions[uri].append(queue)
-        try:
-            yield queue
-        finally:
-            self.subscriptions[uri].remove(queue)
-
-    # Tool Management
-    async def register_tool(self, tool: Tool) -> None:
-        """Регистрация нового инструмента"""
-        self.tools[tool.name] = tool
-
-    async def get_tool(self, name: str) -> Optional[Tool]:
-        """Получение инструмента по имени"""
-        return self.tools.get(name)
-
-    async def list_tools(self) -> Dict[str, Tool]:
-        """Список всех доступных инструментов"""
-        return self.tools
-
-    async def execute_tool(
-        self, name: str, parameters: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Выполнение инструмента"""
-        tool = await self.get_tool(name)
-        if not tool:
-            raise HTTPException(
-                status_code=404, detail=f"Tool '{name}' not found"
-            )
-
-        # Validate parameters against schema
-        try:
-            jsonschema.validate(parameters, tool.input_schema)
-        except jsonschema.exceptions.ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-        # Execute tool logic
-        try:
-            result = await self._execute_tool_logic(tool, parameters)
-            return {"content": [{"type": "text", "text": str(result)}]}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-    # Prompt Management
-    async def register_prompt(self, prompt: Prompt) -> None:
-        """Регистрация нового промпта"""
-        self.prompts[prompt.name] = prompt
-
-    async def get_prompt(self, name: str) -> Optional[Prompt]:
-        """Получение промпта по имени"""
-        return self.prompts.get(name)
-
-    async def list_prompts(self) -> List[Prompt]:
-        """Список всех доступных промптов"""
-        return list(self.prompts.values())
-
-    async def execute_prompt(
-        self, name: str, arguments: Dict[str, Any]
-    ) -> List[Message]:
-        """Выполнение промпта"""
-        prompt = await self.get_prompt(name)
-        if not prompt:
-            raise HTTPException(
-                status_code=404, detail=f"Prompt '{name}' not found"
-            )
-
-        # Validate required arguments
-        if prompt.arguments:
-            required = [arg.name for arg in prompt.arguments if arg.required]
-            missing = [arg for arg in required if arg not in arguments]
-            if missing:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Missing required arguments: {', '.join(missing)}",
-                )
-
-        # Generate messages
-        return await self._generate_prompt_messages(prompt, arguments)
-
-    # Sampling Support
-    async def register_sampler(self, sampler: BaseSampler) -> None:
-        """Регистрация нового сэмплера"""
-        self.samplers[sampler.name] = sampler
-
-    async def get_sampler(self, name: str) -> Optional[BaseSampler]:
-        """Получение сэмплера по имени"""
-        return self.samplers.get(name)
-
-    async def list_samplers(self) -> List[BaseSampler]:
-        """Список всех доступных сэмплеров"""
-        return list(self.samplers.values())
-
-    async def create_sampling(
-        self, request: SamplingRequest
-    ) -> SamplingResponse:
-        """Создание сэмплинга для LLM"""
-        sampler = await self.get_sampler("keyword_sampler")
-        if not sampler:
-            raise HTTPException(status_code=500, detail="No sampler available")
-
-        prepared_request = await sampler.execute(request.dict())
-        # Implement sampling logic here
-        raise NotImplementedError("Sampling not implemented")
-
-    # GraphQL API
-    async def handle_graphql(
-        self, query: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Обработка GraphQL запроса"""
-        from app.models.mcp import mcp_schema
-
-        result = await graphql(
-            mcp_schema, query, variable_values=variables
-        )
-        if result.errors:
-            raise HTTPException(status_code=400, detail=str(result.errors[0]))
-        return result.data
-
-    # Private methods
-    async def _execute_tool_logic(
-        self, tool: Tool, parameters: Dict[str, Any]
-    ) -> Any:
-        """Execute tool logic"""
-        try:
-            result = await tool.execute(parameters)
-            return result
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Tool execution failed: {str(e)}"
-            )
-
-    async def _generate_prompt_messages(
-        self, prompt: Prompt, arguments: Dict[str, Any]
-    ) -> List[Message]:
-        """Генерация сообщений для промпта"""
-        raise NotImplementedError(
-            f"Prompt '{prompt.name}' generation not implemented"
-        )
-
-    async def _notify_resource_subscribers(
-        self, uri: str, content: Any
+    def __init__(
+        self,
+        registry: MCPRegistry,
+        storage: Optional[BaseStorage] = None,
     ) -> None:
-        """Оповещение подписчиков об обновлении ресурса"""
-        if uri in self.subscriptions:
-            for queue in self.subscriptions[uri]:
-                await queue.put(content)
+        """Initialize the service."""
+        self.registry = registry
+        self.storage = storage or ElasticsearchStorage()
+        self.redis = RedisStorage()
 
+    async def initialize(self) -> None:
+        """Initialize the service."""
+        await self.storage.initialize()
 
-# Создаем глобальный экземпляр сервиса
-mcp_service = MCPService()
+    async def index_prompt(self, prompt: dict) -> dict:
+        """Index a prompt in storage."""
+        return await self.storage.index_prompt(prompt)
 
+    async def get_prompt(self, prompt_id: str) -> dict:
+        """Get a prompt from storage."""
+        return await self.storage.get_prompt(prompt_id)
 
-# Регистрируем сэмплеры
-async def register_samplers():
-    samplers = [KeywordSampler(), MLSampler()]
+    async def search_prompts(self, query: str) -> list[dict]:
+        """Search prompts in storage."""
+        return await self.storage.search_prompts(query)
 
-    for sampler in samplers:
-        await sampler.initialize()
-        await mcp_service.register_sampler(sampler)
+    async def index_resource(self, resource: dict) -> dict:
+        """Index a resource in storage."""
+        return await self.storage.index_resource(resource)
 
+    async def get_resource(self, resource_id: str) -> dict:
+        """Get a resource from storage."""
+        return await self.storage.get_resource(resource_id)
 
-# Запускаем регистрацию сэмплеров
-asyncio.create_task(register_samplers())
+    async def search_resources(self, query: str) -> list[dict]:
+        """Search resources in storage."""
+        results = await self.storage.search_resources(query)
+        return [
+            {
+                "id": result["id"],
+                "name": result["name"],
+                "type": result["type"],
+                "content": result["content"],
+            }
+            for result in results
+        ]
+
+    async def delete_resource(self, resource_id: str) -> None:
+        """Delete a resource from storage."""
+        await self.storage.delete_resource(resource_id)
+
+    async def execute_tool(self, tool_name: str, params: dict) -> dict:
+        """Execute a tool."""
+        try:
+            tool = self.registry.get_tool(tool_name)
+            result = await tool.execute(params)
+            return {"success": True, "result": result}
+        except MCPError as err:
+            raise MCPError(f"Tool execution failed: {err}") from err
+
+    async def process_message(
+        self,
+        message: Message,
+        preferences: Optional[ModelPreferences] = None,
+    ) -> dict:
+        """Process a message."""
+        try:
+            if message.role == MessageRole.USER:
+                # Process user message
+                response = await self._process_user_message(message, preferences)
+            elif message.role == MessageRole.ASSISTANT:
+                # Process assistant message
+                response = await self._process_assistant_message(message)
+            else:
+                response = {"error": f"Unsupported message role: {message.role}"}
+
+            return response
+        except MCPError as err:
+            raise MCPError(f"Message processing failed: {err}") from err
+
+    async def _process_user_message(
+        self,
+        message: Message,
+        preferences: Optional[ModelPreferences] = None,
+    ) -> dict:
+        """Process a user message."""
+        try:
+            # Extract content and prepare request
+            content = message.content[0].content if message.content else ""
+            response = await self._generate_response(content, preferences)
+            return response
+        except MCPError as err:
+            raise MCPError(f"User message processing failed: {err}") from err
+
+    async def _process_assistant_message(self, message: Message) -> dict:
+        """Process an assistant message."""
+        try:
+            # Extract content and prepare response
+            content = message.content[0].content if message.content else ""
+            return {"response": content}
+        except MCPError as err:
+            raise MCPError(f"Assistant message processing failed: {err}") from err
+
+    async def _generate_response(
+        self,
+        content: str,
+        preferences: Optional[ModelPreferences] = None,
+    ) -> dict:
+        """Generate a response using sampling."""
+        try:
+            # Prepare sampling request
+            request = SamplingRequest(
+                prompt=content,
+                preferences=preferences or ModelPreferences(),
+            )
+
+            # Get sampler and generate response
+            sampler = self.registry.get_sampler("default")
+            response = await sampler.sample(request)
+
+            return {"response": response.text}
+        except MCPError as err:
+            raise MCPError(f"Response generation failed: {err}") from err
+
+    async def process_sampling_request(
+        self,
+        request: SamplingRequest,
+    ) -> SamplingResponse:
+        """Process a sampling request."""
+        try:
+            sampler = self.registry.get_sampler(request.sampler or "default")
+            response = await sampler.sample(request)
+            return response
+        except MCPError as err:
+            raise MCPError(f"Sampling request failed: {err}") from err
+
+    async def execute_graphql(self, query: str, variables: dict) -> dict:
+        """Execute a GraphQL query."""
+        try:
+            # Execute query and return result
+            result = await self._execute_graphql_query(query, variables)
+            return result
+        except MCPError as err:
+            raise MCPError(f"GraphQL execution failed: {err}") from err
+
+    async def _execute_graphql_query(self, query: str, variables: dict) -> dict:
+        """Execute a GraphQL query internally."""
+        try:
+            # Execute query using schema
+            result = {"data": {}}  # Placeholder for actual GraphQL execution
+            return result
+        except Exception as err:
+            raise MCPError(f"GraphQL query execution failed: {err}") from err

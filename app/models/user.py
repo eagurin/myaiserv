@@ -10,9 +10,7 @@ class User(BaseModel):
     id = Column(Integer, primary_key=True, autoincrement=True)
     telegram_id = Column(BigInteger, unique=True, nullable=False)
     username = Column(String(255), nullable=True)
-    balance = Column(
-        DECIMAL(precision=18, scale=8), default=0.0, nullable=False
-    )
+    balance = Column(DECIMAL(precision=18, scale=8), default=0.0, nullable=False)
 
     # Relationships will be added as we create other models
     accounts = relationship(

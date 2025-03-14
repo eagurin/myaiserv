@@ -1,7 +1,6 @@
 import json
 import os
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import aioredis
 
@@ -30,13 +29,9 @@ class RedisStorage:
         await self.redis.set(key, json.dumps(data), ex=ttl or self.default_ttl)
         # Добавляем в список последних промптов
         await self.redis.lpush("prompt:recent", prompt_id)
-        await self.redis.ltrim(
-            "prompt:recent", 0, 99
-        )  # Храним только 100 последних
+        await self.redis.ltrim("prompt:recent", 0, 99)  # Храним только 100 последних
 
-    async def get_cached_prompt(
-        self, prompt_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_cached_prompt(self, prompt_id: str) -> Optional[Dict[str, Any]]:
         """Получение промпта из кэша"""
         key = f"prompt:{prompt_id}"
         data = await self.redis.get(key)
@@ -98,9 +93,7 @@ class RedisStorage:
         await self.redis.delete(key)
 
     # Методы для работы с rate limiting
-    async def check_rate_limit(
-        self, key: str, limit: int, window: int
-    ) -> bool:
+    async def check_rate_limit(self, key: str, limit: int, window: int) -> bool:
         """Проверка rate limit
 
         Args:

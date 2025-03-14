@@ -1,9 +1,8 @@
 import hashlib
 import json
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List
 
-import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
@@ -46,8 +45,9 @@ class EmbeddingsManager:
                     cache_key, json.dumps(vector), ex=self.cache_ttl
                 )
                 return vector
-        except:
-            pass
+        except Exception as e:
+            # Логируем ошибку и продолжаем выполнение
+            print(f"Error searching Elasticsearch: {e}")
 
         # Генерируем новый эмбеддинг
         with torch.no_grad():
@@ -57,9 +57,7 @@ class EmbeddingsManager:
             vector = embedding.cpu().numpy().tolist()
 
         # Сохраняем в Redis
-        await redis_storage.set(
-            cache_key, json.dumps(vector), ex=self.cache_ttl
-        )
+        await redis_storage.set(cache_key, json.dumps(vector), ex=self.cache_ttl)
 
         # Сохраняем в Elasticsearch
         await es_storage.index(

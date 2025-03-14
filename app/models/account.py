@@ -8,12 +8,8 @@ class Account(BaseModel):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(
-        Integer, ForeignKey("users.id"), nullable=False, index=True
-    )
-    balance = Column(
-        DECIMAL(precision=18, scale=8), default=0.0, nullable=False
-    )
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    balance = Column(DECIMAL(precision=18, scale=8), default=0.0, nullable=False)
     currency_code = Column(
         String(10), nullable=False, default="USD"
     )  # Can be USD, EUR, etc.

@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from elasticsearch import AsyncElasticsearch
+from elasticsearch import AsyncElasticsearch, NotFoundError
 
 
 class ElasticsearchStorage:
@@ -49,9 +49,7 @@ class ElasticsearchStorage:
         for index_name in self.indices.values():
             if not await self.es.indices.exists(index=index_name):
                 mapping = (
-                    prompt_mapping
-                    if "prompts" in index_name
-                    else resource_mapping
+                    prompt_mapping if "prompts" in index_name else resource_mapping
                 )
                 await self.es.indices.create(index=index_name, body=mapping)
 
@@ -73,16 +71,15 @@ class ElasticsearchStorage:
     async def get_prompt(self, prompt_id: str) -> Optional[Dict[str, Any]]:
         """Получение промпта по ID"""
         try:
-            result = await self.es.get(
-                index=self.indices["prompts"], id=prompt_id
-            )
+            result = await self.es.get(index=self.indices["prompts"], id=prompt_id)
             return result["_source"]
-        except:
+        except NotFoundError:
+            return None
+        except Exception as e:
+            print(f"Error getting prompt {prompt_id}: {e}")
             return None
 
-    async def search_prompts(
-        self, query: str, size: int = 10
-    ) -> List[Dict[str, Any]]:
+    async def search_prompts(self, query: str, size: int = 10) -> List[Dict[str, Any]]:
         """Поиск промптов"""
         body = {
             "query": {
@@ -105,9 +102,7 @@ class ElasticsearchStorage:
         )
         return result["_id"]
 
-    async def get_resource(
-        self, resource_uri: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_resource(self, resource_uri: str) -> Optional[Dict[str, Any]]:
         """Получение ресурса по URI"""
         try:
             result = await self.es.search(
@@ -116,7 +111,8 @@ class ElasticsearchStorage:
             )
             hits = result["hits"]["hits"]
             return hits[0]["_source"] if hits else None
-        except:
+        except Exception as e:
+            print(f"Error getting resource {resource_uri}: {e}")
             return None
 
     async def search_resources(
@@ -131,15 +127,11 @@ class ElasticsearchStorage:
             should_queries.append({"term": {"mime_type.keyword": mime_type}})
 
         body = {
-            "query": {
-                "bool": {"should": should_queries, "minimum_should_match": 1}
-            },
+            "query": {"bool": {"should": should_queries, "minimum_should_match": 1}},
             "size": size,
         }
 
-        result = await self.es.search(
-            index=self.indices["resources"], body=body
-        )
+        result = await self.es.search(index=self.indices["resources"], body=body)
         return [hit["_source"] for hit in result["hits"]["hits"]]
 
     async def delete_resource(self, resource_uri: str) -> bool:
@@ -150,7 +142,8 @@ class ElasticsearchStorage:
                 body={"query": {"term": {"uri.keyword": resource_uri}}},
             )
             return True
-        except:
+        except Exception as e:
+            print(f"Error deleting resource {resource_uri}: {e}")
             return False
 
 

@@ -29,9 +29,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-
-
-
   db:
     image: postgres:15
     volumes:
@@ -52,7 +49,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
@@ -172,13 +168,19 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  searxng:
+    image: mcp-server-searxng:latest
+    ports:
+      - "8090:80"
+    networks:
+      - app_network
 
   prometheus:
     image: prom/prometheus:v2.48.0
     volumes:
-    - prometheus_data:/prometheus
-    - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    - ./config/prometheus/rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/prometheus/rules:/etc/prometheus/rules
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'

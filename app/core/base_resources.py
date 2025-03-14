@@ -1,8 +1,7 @@
 import json
 import os
-from abc import abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import aiofiles
 
@@ -95,9 +94,7 @@ class MemoryResource(MCPResource):
 class APIResource(MCPResource):
     """Ресурс для работы с API"""
 
-    def __init__(
-        self, name: str, base_url: str, mime_type: str = "application/json"
-    ):
+    def __init__(self, name: str, base_url: str, mime_type: str = "application/json"):
         uri = f"api://{base_url}"
         super().__init__(name, uri, mime_type)
         self.base_url = base_url

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Protocol
 
 
@@ -56,16 +55,12 @@ class BaseStorage(ABC):
         await self.redis.cache_prompt(prompt_id, prompt_data)
         return prompt_id
 
-    async def search_prompts(
-        self, query: str, size: int = 10
-    ) -> List[Dict[str, Any]]:
+    async def search_prompts(self, query: str, size: int = 10) -> List[Dict[str, Any]]:
         """Поиск промптов"""
         return await self.es.search_prompts(query, size)
 
     # Методы для работы с ресурсами
-    async def get_resource(
-        self, resource_uri: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_resource(self, resource_uri: str) -> Optional[Dict[str, Any]]:
         """Получение ресурса"""
         # Пробуем получить из кэша
         resource = await self.redis.get_cached_resource(resource_uri)
